@@ -3,18 +3,26 @@ import { Tweet } from "./tweet.ts";
 import { urlWithParams } from "./url_with_params.ts";
 
 export class Dwitter {
-  private key: string;
-  private secret: string;
-  private token: string;
+  private keys: APIKeys;
   private baseUrl = "https://api.twitter.com/2";
 
   constructor(credentials: APIKeys) {
-    this.key = credentials.key;
-    this.secret = credentials.secret;
-    this.token = credentials.token;
+    this.keys = credentials;
+  }
+
+  checkHasKey(key: string | undefined, keyName: string, keyUsage: string) {
+    if (!key) {
+      console.log(
+        `Auth Error: '${keyName}' is a required API key for ${keyUsage}.`
+      );
+
+      Deno.exit(0);
+    }
   }
 
   async getTweet(id: string, options?: any) {
+    this.checkHasKey(this.keys.bearerToken, "bearerToken", "getting tweets");
+
     let reqUrl = `${this.baseUrl}/tweets/${id}`;
 
     if (options) {
@@ -23,7 +31,7 @@ export class Dwitter {
 
     const res = await fetch(reqUrl, {
       headers: {
-        authorization: `Bearer ${this.token}`,
+        authorization: `Bearer ${this.keys.bearerToken}`,
       },
     });
 
@@ -41,12 +49,35 @@ export class Dwitter {
   }
 
   async getTweets(ids: string[], options?: any) {
-    const tweets = [];
+    this.checkHasKey(
+      this.keys.bearerToken,
+      "bearerToken",
+      "getting multiple tweets"
+    );
 
-    for (const id of ids) {
-      tweets.push(await this.getTweet(id, options));
+    let reqUrl = `${this.baseUrl}/tweets`;
+
+    reqUrl = urlWithParams(reqUrl, {
+      ids: ids.join(","),
+    });
+
+    if (options) {
+      reqUrl = urlWithParams(reqUrl, options);
     }
 
-    return tweets;
+    const res = await fetch(reqUrl, {
+      headers: {
+        authorization: `Bearer ${this.keys.bearerToken}`,
+      },
+    });
+
+    const tweets = await res.json();
+
+    if (tweets.errors) {
+      console.log(tweets);
+      Deno.exit(0);
+    }
+
+    return tweets.data;
   }
 }

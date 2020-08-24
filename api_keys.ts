@@ -1,5 +1,9 @@
 export interface APIKeys {
-  key: string;
-  secret: string;
-  token: string;
+  consumerKey?: string;
+  consumerSecret?: string;
+
+  bearerToken?: string;
+
+  accessToken?: string;
+  accessSecret?: string;
 }
