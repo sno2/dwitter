@@ -1,4 +1,4 @@
-import { APICreds } from "./api_creds.ts";
+import { APIKeys } from "./api_keys.ts";
 import { Tweet } from "./tweet.ts";
 import { urlWithParams } from "./url_with_params.ts";
 
@@ -8,7 +8,7 @@ export class Dwitter {
   private token: string;
   private baseUrl = "https://api.twitter.com/2";
 
-  constructor(credentials: APICreds) {
+  constructor(credentials: APIKeys) {
     this.key = credentials.key;
     this.secret = credentials.secret;
     this.token = credentials.token;
