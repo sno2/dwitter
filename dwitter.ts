@@ -11,13 +11,21 @@ export class Dwitter {
     this.baseUrl = "https://api.twitter.com/2";
     this.keys = credentials;
 
-    this.checkHasKey(this.keys.bearerToken, "bearerToken", "All API Requests");
+    Dwitter.checkHasKey(
+      this.keys.bearerToken,
+      "bearerToken",
+      "All API Requests"
+    );
 
     this.fetchHeaders = new Headers();
     this.fetchHeaders.set("authorization", `Bearer ${this.keys.bearerToken}`);
   }
 
-  checkHasKey(key: string | undefined, keyName: string, keyUsage: string) {
+  static checkHasKey(
+    key: string | undefined,
+    keyName: string,
+    keyUsage: string
+  ) {
     if (!key) {
       console.log(
         `Auth Error: '${keyName}' is a required API key for ${keyUsage}.`
