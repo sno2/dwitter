@@ -14,11 +14,21 @@ export class Dwitter {
     Dwitter.checkHasKey(
       this.keys.bearerToken,
       "bearerToken",
-      "All API Requests"
+      "all API requests"
     );
 
     this.fetchHeaders = new Headers();
     this.fetchHeaders.set("authorization", `Bearer ${this.keys.bearerToken}`);
+  }
+
+  static logErrorsResponse({ errors, title, detail, type }: any) {
+    if (errors) {
+      console.log(`${title} Error: ${detail} (see ${type})`);
+
+      for (const { message, parameters } of errors) {
+        console.log(`\n${message}`);
+      }
+    }
   }
 
   static checkHasKey(
@@ -42,23 +52,60 @@ export class Dwitter {
       headers: this.fetchHeaders,
     });
 
-    const { errors, data: tweet } = await res.json();
+    const response = await res.json();
 
-    return tweet;
+    Dwitter.logErrorsResponse(response);
+
+    return response.data;
   }
 
-  async getTweets(ids: string[], options?: any) {
-    const reqUrl = urlWithParams(`${this.baseUrl}/tweets`, {
-      ids: ids.join(","),
-      ...options,
-    });
+  async getTweets(ids: string[] | any[], globalOptions?: any) {
+    // TODO: Optimizitations
 
-    const res = await fetch(reqUrl, {
-      headers: this.fetchHeaders,
-    });
+    let areAllStrings = true;
 
-    const { errors, data: tweets } = await res.json();
+    for (const id of ids) {
+      if (id.constructor !== String) {
+        areAllStrings = false;
+        break;
+      }
+    }
 
-    return tweets;
+    if (areAllStrings) {
+      const reqUrl = urlWithParams(`${this.baseUrl}/tweets`, {
+        ids: ids.join(","),
+        ...globalOptions,
+      });
+
+      const res = await fetch(reqUrl, {
+        headers: this.fetchHeaders,
+      });
+
+      const response = await res.json();
+
+      Dwitter.logErrorsResponse(response);
+
+      return response.data;
+    } else {
+      const tweets = [];
+
+      for (const tweet of ids) {
+        let toPush: any;
+
+        if (tweet.constructor === String) {
+          toPush = await this.getTweet(<string>tweet, globalOptions);
+        } else {
+          const { id, options } = tweet;
+
+          // TODO: Fix `globalOptions`'s keys overriding regular `options`'s keys.
+
+          toPush = await this.getTweet(id, { ...options, ...globalOptions });
+        }
+
+        tweets.push(toPush);
+      }
+
+      return tweets;
+    }
   }
 }
