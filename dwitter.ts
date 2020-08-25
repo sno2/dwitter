@@ -4,10 +4,17 @@ import { urlWithParams } from "./url_with_params.ts";
 
 export class Dwitter {
   private keys: APIKeys;
-  private baseUrl = "https://api.twitter.com/2";
+  private baseUrl: string;
+  private fetchHeaders: Headers;
 
   constructor(credentials: APIKeys) {
+    this.baseUrl = "https://api.twitter.com/2";
     this.keys = credentials;
+
+    this.checkHasKey(this.keys.bearerToken, "bearerToken", "All API Requests");
+
+    this.fetchHeaders = new Headers();
+    this.fetchHeaders.set("authorization", `Bearer ${this.keys.bearerToken}`);
   }
 
   checkHasKey(key: string | undefined, keyName: string, keyUsage: string) {
@@ -21,63 +28,29 @@ export class Dwitter {
   }
 
   async getTweet(id: string, options?: any) {
-    this.checkHasKey(this.keys.bearerToken, "bearerToken", "getting tweets");
-
-    let reqUrl = `${this.baseUrl}/tweets/${id}`;
-
-    if (options) {
-      reqUrl = urlWithParams(reqUrl, options);
-    }
+    const reqUrl = urlWithParams(`${this.baseUrl}/tweets/${id}`, options || {});
 
     const res = await fetch(reqUrl, {
-      headers: {
-        authorization: `Bearer ${this.keys.bearerToken}`,
-      },
+      headers: this.fetchHeaders,
     });
 
-    const tweet = await res.json();
+    const { errors, data: tweet } = await res.json();
 
-    if (tweet.errors) {
-      for (const err of tweet.errors) {
-        console.error(`${err.title}: ${err.detail}`);
-      }
-
-      Deno.exit(0);
-    }
-
-    return tweet.data;
+    return tweet;
   }
 
   async getTweets(ids: string[], options?: any) {
-    this.checkHasKey(
-      this.keys.bearerToken,
-      "bearerToken",
-      "getting multiple tweets"
-    );
-
-    let reqUrl = `${this.baseUrl}/tweets`;
-
-    reqUrl = urlWithParams(reqUrl, {
+    const reqUrl = urlWithParams(`${this.baseUrl}/tweets`, {
       ids: ids.join(","),
+      ...options,
     });
-
-    if (options) {
-      reqUrl = urlWithParams(reqUrl, options);
-    }
 
     const res = await fetch(reqUrl, {
-      headers: {
-        authorization: `Bearer ${this.keys.bearerToken}`,
-      },
+      headers: this.fetchHeaders,
     });
 
-    const tweets = await res.json();
+    const { errors, data: tweets } = await res.json();
 
-    if (tweets.errors) {
-      console.log(tweets);
-      Deno.exit(0);
-    }
-
-    return tweets.data;
+    return tweets;
   }
 }
