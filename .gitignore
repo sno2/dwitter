@@ -1,2 +1,2 @@
-test/.twitter.env
-test/dev.ts
+tests/dev.ts
+tests/.twitter.env
