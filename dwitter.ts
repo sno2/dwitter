@@ -14,7 +14,7 @@ export class Dwitter {
     Dwitter.checkHasKey(
       this.keys.bearerToken,
       "bearerToken",
-      "all API requests"
+      "all API requests",
     );
 
     this.fetchHeaders = new Headers();
@@ -34,11 +34,11 @@ export class Dwitter {
   static checkHasKey(
     key: string | undefined,
     keyName: string,
-    keyUsage: string
+    keyUsage: string,
   ) {
     if (!key) {
       console.log(
-        `Auth Error: '${keyName}' is a required API key for ${keyUsage}.`
+        `Auth Error: '${keyName}' is a required API key for ${keyUsage}.`,
       );
 
       Deno.exit(0);
@@ -59,8 +59,13 @@ export class Dwitter {
     return response.data;
   }
 
-  async getRecentByUser(userName: string, options?: any) {
-    const reqUrl = urlWithParams(`${this.baseUrl}/tweets/search/recent?query=from:${userName}`, options || {});
+  async getRecentByUser(userName: string, options: any = {}) {
+    //add the query from userName to options
+    options.query = `from:${userName}`;
+    const reqUrl = urlWithParams(
+      `${this.baseUrl}/tweets/search/recent`,
+      options || {},
+    );
 
     const res = await fetch(reqUrl, {
       headers: this.fetchHeaders,
@@ -107,7 +112,7 @@ export class Dwitter {
         let toPush: any;
 
         if (tweet.constructor === String) {
-          toPush = await this.getTweet(<string>tweet, globalOptions);
+          toPush = await this.getTweet(<string> tweet, globalOptions);
         } else {
           const { id, options } = tweet;
 
