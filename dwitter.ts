@@ -59,6 +59,20 @@ export class Dwitter {
     return response.data;
   }
 
+  async getRecentByUser(userName: string, options?: any) {
+    const reqUrl = urlWithParams(`${this.baseUrl}/tweets/search/recent?query=from:${userName}`, options || {});
+
+    const res = await fetch(reqUrl, {
+      headers: this.fetchHeaders,
+    });
+
+    const response = await res.json();
+
+    Dwitter.logErrorsResponse(response);
+
+    return response.data;
+  }
+
   async getTweets(ids: string[] | any[], globalOptions?: any) {
     // TODO: Optimizitations
 
