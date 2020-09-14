@@ -60,11 +60,10 @@ export class Dwitter {
   }
 
   async getRecentByUser(userName: string, options: any = {}) {
-    //add the query from userName to options
-    options.query = `from:${userName}`;
+    // The query is included with the options
     const reqUrl = urlWithParams(
       `${this.baseUrl}/tweets/search/recent`,
-      options || {},
+      { ...options, query: `from:${userName}` },
     );
 
     const res = await fetch(reqUrl, {
