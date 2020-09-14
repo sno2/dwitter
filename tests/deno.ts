@@ -42,3 +42,16 @@ Deno.test("Dwitter.getTweets()", async function () {
 
   assertEquals(tweets, correctTweets);
 });
+
+Deno.test("Dwitter.getRecentByUser()", async function () {
+  const tweets = await dwitter.getRecentByUser("DevAnelon");
+
+  const correctTweets = [
+    {
+      id: "1303495199243431936",
+      text: "Been working on a 2d game engine.  Just finished collision handling and server client communications. It is starting to feel a little more like a game now. https://t.co/U5bnBCuvvr",
+    },
+  ];
+
+  assertEquals(tweets, correctTweets);
+});
