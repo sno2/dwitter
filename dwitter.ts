@@ -123,6 +123,7 @@ export class Dwitter {
     const res = await this.apiRequest(reqUrl, {
       authorization: `OAuth ${oauth}`,
       json: { data: { hidden: newStatus } },
+      type: "POST",
     });
 
     return res;
