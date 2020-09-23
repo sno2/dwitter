@@ -1,6 +1,8 @@
 import { buildUrl } from "https://deno.land/x/url_builder@v1.0.0/mod.ts";
 import type { DwitterAuth } from "./models/dwitter_auth.ts";
 import type {
+  HideRepliesResponseData,
+  ResponseData,
   TweetResponseData,
   TweetsResponseData,
   TweetsSearchResponseData,
@@ -9,22 +11,20 @@ import type {
 } from "./models/responses/mod.ts";
 
 // TODO: JSDocs
+// TODO: Add `RequestFields` interface
 
 export class Dwitter {
   private keys: DwitterAuth;
   private static baseUrl = "https://api.twitter.com/2";
-  private fetchHeaders: Headers;
 
   constructor(credentials: DwitterAuth) {
     this.keys = credentials;
-    this.fetchHeaders = new Headers();
-    this.fetchHeaders.set("authorization", `Bearer ${this.keys.bearerToken}`);
   }
 
-  public async getTweet(id: string, options?: any): Promise<TweetResponseData> {
+  public async getTweet(id: string, fields?: any): Promise<TweetResponseData> {
     const reqUrl = buildUrl(Dwitter.baseUrl, {
       path: ["tweets", id],
-      queryParams: options,
+      queryParams: fields,
     });
 
     const res = await this.apiRequest(reqUrl);
@@ -34,13 +34,13 @@ export class Dwitter {
 
   public async getTweets(
     ids: string[],
-    globalOptions?: any
+    fields?: any
   ): Promise<TweetsResponseData> {
     const reqUrl = buildUrl(Dwitter.baseUrl, {
       path: "tweets",
       queryParams: {
         ids: ids.join(","),
-        ...globalOptions,
+        ...fields,
       },
     });
 
@@ -111,26 +111,78 @@ export class Dwitter {
     return res;
   }
 
-  public async apiRequest(reqUrl: string) {
+  public async setTweetReplyViewStatus(
+    id: string,
+    newStatus: boolean, // true = hidden; false = not hidden;
+    oauth: string
+  ): Promise<HideRepliesResponseData> {
+    const reqUrl = buildUrl(Dwitter.baseUrl, {
+      path: ["tweets", id, "hidden"],
+    });
+
+    const res = await this.apiRequest(reqUrl, {
+      authorization: `OAuth ${oauth}`,
+      json: { data: { hidden: newStatus } },
+    });
+
+    return res;
+  }
+
+  public async hideTweetReply(
+    id: string,
+    oauth: string
+  ): Promise<HideRepliesResponseData> {
+    return await this.setTweetReplyViewStatus(id, true, oauth);
+  }
+
+  public async showTweetReply(
+    id: string,
+    oauth: string
+  ): Promise<HideRepliesResponseData> {
+    return await this.setTweetReplyViewStatus(id, false, oauth);
+  }
+
+  public async apiRequest(
+    reqUrl: string,
+    options?: {
+      authorization?: string;
+      json?: any;
+      type?: "GET" | "PUT" | "POST";
+    }
+  ) {
     const req = await fetch(reqUrl, {
-      headers: this.fetchHeaders,
+      method: options?.type || "GET",
+      body: options?.json ? JSON.stringify(options.json) : null,
+      headers: {
+        authorization:
+          options?.authorization || `Bearer ${this.keys.bearerToken}`,
+      },
     });
 
     const res = await req.json();
 
-    if (!res.data || res.errors) {
-      for (const error of res.errors) {
-        if (error.message) {
-          console.error(`Unregistered Error: ${error.message}`);
-        } else if (error.title === "Field Authorization Error") {
-          console.error(
-            `Auth Error: The tokens provided do not have access to the '${error.field}' field provided on the '${error.resource_type}' with an id of '${error.value}'.`
-          );
-        }
-      }
-    }
+    Dwitter.handleResponseError(res);
 
     return await res;
+  }
+
+  private static handleResponseError(res: ResponseData): void {
+    if (!res.data || res.errors) {
+      // They have two error types
+      if (res.title === "Invalid Request") {
+        for (const { message } of res.errors) {
+          console.error(`${res.title} Error: ${message}`);
+        }
+      } else {
+        for (const { title, message } of res.errors) {
+          console.error(`${title} Error: ${message}`);
+        }
+      }
+
+      if (res.type) {
+        console.error(`Learn more at ${res.type}`);
+      }
+    }
   }
 
   // TODO: Good method for logging errors for *all* types of Twitter API requests.
