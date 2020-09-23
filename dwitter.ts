@@ -3,6 +3,7 @@ import type { DwitterAuth } from "./models/dwitter_auth.ts";
 import type {
   TweetResponseData,
   TweetsResponseData,
+  TweetsSearchResponseData,
   UserResponseData,
   UsersResponseData,
 } from "./models/responses/mod.ts";
@@ -84,6 +85,23 @@ export class Dwitter {
       path: "users",
       queryParams: {
         ids: ids.join(","),
+        ...fields,
+      },
+    });
+
+    const res = await this.apiRequest(reqUrl);
+
+    return res;
+  }
+
+  public async searchRecentTweets(
+    query: string,
+    fields?: any
+  ): Promise<TweetsSearchResponseData> {
+    const reqUrl = buildUrl(Dwitter.baseUrl, {
+      path: ["tweets", "search", "recent"],
+      queryParams: {
+        query,
         ...fields,
       },
     });
