@@ -9,4 +9,7 @@ export interface ResponseData {
   data?: TweetData | TweetData[] | UserData | UserData[];
   includes?: IncludesData;
   meta?: any;
+  title?: string;
+  detail?: string;
+  type?: string;
 }
