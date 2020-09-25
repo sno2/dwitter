@@ -3,6 +3,7 @@ import type { DwitterAuth } from "./models/dwitter_auth.ts";
 import type {
   HideRepliesResponseData,
   ResponseData,
+  StreamRulesResponseData,
   TweetResponseData,
   TweetsResponseData,
   TweetsSearchResponseData,
@@ -12,6 +13,9 @@ import type {
 
 // TODO: JSDocs
 // TODO: Add `RequestFields` interface
+// TODO: Add optional oauth parameters for supported methods
+// TODO: Sort methods by the following ruleset: (public > private > static with all alphabetized)
+// TODO: Create a `TweetStream` class and and abstract out some of the ugly stream stuff with events & callbacks
 
 export class Dwitter {
   private keys: DwitterAuth;
@@ -94,7 +98,7 @@ export class Dwitter {
     return res;
   }
 
-  public async searchRecentTweets(
+  public async getRecentTweetsByQuery(
     query: string,
     fields?: any
   ): Promise<TweetsSearchResponseData> {
@@ -107,6 +111,79 @@ export class Dwitter {
     });
 
     const res = await this.apiRequest(reqUrl);
+
+    return res;
+  }
+
+  public getTweetsStream(fields?: any) {
+    // returns request to be used as a stream
+    const reqUrl = buildUrl(Dwitter.baseUrl, {
+      path: ["tweets", "sample", "stream"],
+      queryParams: { ...fields },
+    });
+
+    return this.apiRequest(reqUrl, { sync: true });
+  }
+
+  // TODO: Add return type
+  public getFilteredTweetsStream(fields?: any) {
+    // returns request to be used as a stream
+    const reqUrl = buildUrl(Dwitter.baseUrl, {
+      path: ["tweets", "search", "stream"],
+      queryParams: { ...fields },
+    });
+
+    return this.apiRequest(reqUrl, { sync: true });
+  }
+
+  public async getFilteredTweetsStreamRules(
+    ids?: string[]
+  ): Promise<StreamRulesResponseData> {
+    const reqUrl = buildUrl(Dwitter.baseUrl, {
+      path: ["tweets", "search", "stream", "rules"],
+      queryParams: { ids: ids || [] },
+    });
+
+    const res = await this.apiRequest(reqUrl);
+
+    return res;
+  }
+
+  public async addFilteredTweetsStreamRules(
+    rules: { value: string; tag: string }[],
+    dryRun?: boolean
+  ): Promise<StreamRulesResponseData> {
+    const reqUrl = buildUrl(Dwitter.baseUrl, {
+      path: ["tweets", "search", "stream", "rules"],
+      queryParams: {
+        dry_run: dryRun?.toString() || false.toString(),
+      },
+    });
+
+    const res = await this.apiRequest(reqUrl, {
+      json: { add: rules },
+      type: "POST",
+    });
+
+    return res;
+  }
+
+  // TODO: Make sure this actually works because the Twitter Dev response does not really say anything
+  public async deleteFilteredTweetsStreamRules(
+    ids: string[],
+    dryRun?: boolean
+  ): Promise<StreamRulesResponseData> {
+    const reqUrl = buildUrl(Dwitter.baseUrl, {
+      path: ["tweets", "search", "stream", "rules"],
+      queryParams: {
+        dry_run: dryRun?.toString() || false.toString(),
+      },
+    });
+
+    const res = await this.apiRequest(reqUrl, {
+      json: { delete: { ids: ids } },
+      type: "POST",
+    });
 
     return res;
   }
@@ -148,6 +225,7 @@ export class Dwitter {
     options?: {
       authorization?: string;
       json?: any;
+      sync?: boolean;
       type?: "GET" | "PUT" | "POST";
     }
   ) {
@@ -160,15 +238,19 @@ export class Dwitter {
       },
     });
 
-    const res = await req.json();
+    if (options?.sync === true) {
+      return req;
+    } else {
+      const res = await req.json();
 
-    Dwitter.handleResponseError(res);
+      Dwitter.handleResponseError(res);
 
-    return await res;
+      return await res;
+    }
   }
 
   private static handleResponseError(res: ResponseData): void {
-    if (!res.data || res.errors) {
+    if (res.errors) {
       // They have two error types
       if (res.title === "Invalid Request") {
         for (const { message } of res.errors) {
@@ -183,6 +265,10 @@ export class Dwitter {
       if (res.type) {
         console.error(`Learn more at ${res.type}`);
       }
+    } else if (res.status === 405) {
+      console.error(
+        `Auth Error: One of the methods you tried to perform were not correctly authenticated. Did you try to use your Bearer Token instead of a User Context OAuth key?`
+      );
     }
   }
 
