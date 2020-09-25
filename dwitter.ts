@@ -81,7 +81,7 @@ export class Dwitter {
     return res;
   }
 
-  public async getUsersById(
+  public async getUsersByIds(
     ids: string[],
     fields?: any
   ): Promise<UsersResponseData> {
